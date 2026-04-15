@@ -7,8 +7,8 @@ import io
 import subprocess
 import importlib
 from datetime import datetime, timedelta
-import torch
-import torchaudio
+import torch  # type: ignore[reportMissingImports]
+import torchaudio  # type: ignore[reportMissingImports]
 
 # DEFINITIVE FIX: Ensure AudioDecoder is accessible for Diarization
 # Recent torchaudio versions (2.0+) renamed AudioDecoder to StreamReader
