@@ -1149,4 +1149,27 @@ def serve_audio(session_id):
 
 if __name__ == "__main__":
     cleanup_old_media()  # Run storage cleanup on startup
-    app.run(debug=True, host="0.0.0.0")
+
+    # Generate a self-signed SSL cert so mobile browsers allow microphone access
+    # (getUserMedia requires a secure context i.e. HTTPS on non-localhost origins)
+    ssl_ctx = None
+    cert_file = "ssl/cert.pem"
+    key_file = "ssl/key.pem"
+    if not (os.path.exists(cert_file) and os.path.exists(key_file)):
+        try:
+            os.makedirs("ssl", exist_ok=True)
+            subprocess.run([
+                "openssl", "req", "-x509", "-newkey", "rsa:2048",
+                "-keyout", key_file, "-out", cert_file,
+                "-days", "365", "-nodes",
+                "-subj", "/CN=Meeting Intelligence"
+            ], check=True, capture_output=True)
+            print("Generated self-signed SSL certificate for LAN access.")
+        except Exception as e:
+            print(f"SSL cert generation failed (mic won't work on mobile): {e}")
+    if os.path.exists(cert_file) and os.path.exists(key_file):
+        ssl_ctx = (cert_file, key_file)
+        print("HTTPS enabled - mobile mic recording will work.")
+        print("Note: Accept the browser security warning on first visit.")
+
+    app.run(debug=True, host="0.0.0.0", ssl_context=ssl_ctx)

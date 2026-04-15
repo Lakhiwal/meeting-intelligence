@@ -24,6 +24,7 @@ env/
 # App generated data
 recordings/
 models/
+ssl/
 
 # OS
 .DS_Store

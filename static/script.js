@@ -55,11 +55,28 @@ function showToast(msg, icon = "ph ph-info", type = "info") {
     setTimeout(() => toast.classList.remove("show"), 3000);
 }
 
+// On load: if mic is unavailable (non-secure context), adapt the UI
+window.addEventListener("DOMContentLoaded", () => {
+    if (!window.isSecureContext || !navigator.mediaDevices) {
+        startBtn.disabled = true;
+        startBtn.innerHTML = `<i class="ph ph-microphone-slash"></i> Mic Unavailable`;
+        startBtn.title = "Microphone requires HTTPS. Use file upload or visit via https://";
+        // Make the upload button more prominent
+        const uploadBtn = document.getElementById("uploadBtn");
+        if (uploadBtn) {
+            uploadBtn.style.background = "var(--primary)";
+            uploadBtn.style.border = "none";
+            uploadBtn.style.color = "#fff";
+            uploadBtn.innerHTML = `<i class="ph-bold ph-upload-simple"></i> Upload Recording`;
+        }
+    }
+});
+
 // Start Recording
 startBtn.onclick = async () => {
     // Check for Secure Origin (Required for getUserMedia)
     if (!window.isSecureContext) {
-        showToast("Microphone requires HTTPS on mobile. Use File Upload instead!", "ph ph-warning", "error");
+        showToast("Microphone requires HTTPS. Use file upload or visit via https://", "ph ph-warning", "error");
         return;
     }
 
