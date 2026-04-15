@@ -5,6 +5,7 @@ import gc
 import json
 import io
 import subprocess
+import importlib
 from datetime import datetime, timedelta
 import torch
 import torchaudio
@@ -12,11 +13,11 @@ import torchaudio
 # DEFINITIVE FIX: Ensure AudioDecoder is accessible for Diarization
 # Recent torchaudio versions (2.0+) renamed AudioDecoder to StreamReader
 try:
-    import torchaudio.io
-    if hasattr(torchaudio.io, 'AudioDecoder'):
-        from torchaudio.io import AudioDecoder
-    elif hasattr(torchaudio.io, 'StreamReader'):
-        from torchaudio.io import StreamReader as AudioDecoder
+    _torchaudio_io = importlib.import_module("torchaudio.io")
+    if hasattr(_torchaudio_io, 'AudioDecoder'):
+        AudioDecoder = _torchaudio_io.AudioDecoder
+    elif hasattr(_torchaudio_io, 'StreamReader'):
+        AudioDecoder = _torchaudio_io.StreamReader
     else:
         AudioDecoder = None
 except Exception:
