@@ -393,7 +393,7 @@ def get_diarization_pipeline():
     try:
         pipeline_obj = Pipeline.from_pretrained(
             "pyannote/speaker-diarization-3.1",
-            token=HF_TOKEN
+            use_auth_token=HF_TOKEN
         )
         # Always keep diarization on CPU (stable)
         pipeline_obj.to(torch.device("cpu"))
@@ -1172,4 +1172,4 @@ if __name__ == "__main__":
         print("HTTPS enabled - mobile mic recording will work.")
         print("Note: Accept the browser security warning on first visit.")
 
-    app.run(debug=True, host="0.0.0.0", ssl_context=ssl_ctx)
+    app.run(debug=False, host="0.0.0.0", ssl_context=ssl_ctx)
