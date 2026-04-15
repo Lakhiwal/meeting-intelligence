@@ -657,7 +657,7 @@ def process_audio():
     # Validation: Ensure non-zero size
     if not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
         print(f"!! Critical Error: Audio file '{audio_path}' is missing or empty.")
-        job_status[session_id] = "failed"
+        update_status(session_id, "failed", 0)
         return jsonify({"error": "Failed to process audio. The file might be corrupted or empty."}), 400
 
     # Transcription with Dynamic Model Switching and Lazy Loading
@@ -673,7 +673,7 @@ def process_audio():
     print(f"2. Starting Whisper Transcription ({selected_model_name} model)...")
     
     # Check for cancellation before heavy AI starts
-    if job_status.get(session_id) == "cancelled":
+    if job_status.get(session_id, {}).get("status") == "cancelled":
         print(f"!! Job {session_id} cancelled before transcription.")
         return jsonify({"status": "cancelled"}), 200
 
@@ -743,7 +743,7 @@ def process_audio():
             whisper_segments_en = None
             if detected_language != "en":
                 # Check for cancellation between passes
-                if job_status.get(session_id) == "cancelled":
+                if job_status.get(session_id, {}).get("status") == "cancelled":
                     return jsonify({"status": "cancelled"}), 200
                 
                 print(f"2b. Performing translation to English with real-time feedback...")
@@ -779,7 +779,7 @@ def process_audio():
 
     except Exception as e:
         print(f"Whisper transcription failed: {e}")
-        job_status[session_id] = "failed"
+        update_status(session_id, "failed", 0)
         return jsonify({"error": f"Transcription failed: {str(e)}"}), 500
 
     # IMPORTANT: Free VRAM for the heavy Diarization pipeline
@@ -797,7 +797,7 @@ def process_audio():
     torch.cuda.empty_cache()
     
     # Check for cancellation before Diarization
-    if job_status.get(session_id) == "cancelled":
+    if job_status.get(session_id, {}).get("status") == "cancelled":
         print(f"!! Job {session_id} cancelled before diarization.")
         torch.cuda.empty_cache()
         return jsonify({"status": "cancelled"}), 200
@@ -879,7 +879,7 @@ def process_audio():
             transcript_en = "\n".join([f"[{format_timestamp(s['start'])}] {s['text'].strip()}" for s in whisper_segments_en])
 
     # Check for cancellation before Summarization
-    if job_status.get(session_id) == "cancelled":
+    if job_status.get(session_id, {}).get("status") == "cancelled":
         print(f"!! Job {session_id} cancelled before summarization.")
         return jsonify({"status": "cancelled"}), 200
 
@@ -1023,7 +1023,7 @@ def get_progress(session_id):
 def cancel_process(session_id):
     """Sets a cancellation flag for a background job."""
     print(f"🛑 Cancellation requested for: {session_id}")
-    job_status[session_id] = "cancelled"
+    update_status(session_id, "cancelled", 0)
     return jsonify({"success": True})
 
 @app.route("/admin/cleanup", methods=["GET", "POST"])
