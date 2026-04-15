@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meeting Intelligence | AI Dashboard</title>
+
+  <!-- Favicon & PWA Icons -->
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/favicon-192.png">
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/static/favicon.ico">
+  <link rel="manifest" href="/static/manifest.json">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <!-- Phosphor Icons for a modern feel -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-top">
+        <h2><i class="ph-bold ph-chats-teardrop"></i> Meetings</h2>
+        <button class="new-meeting-btn" onclick="startNewMeeting()" title="New Meeting">
+          <i class="ph-bold ph-plus"></i>
+        </button>
+      </div>
+      <div class="search-container">
+        <i class="ph ph-magnifying-glass search-icon"></i>
+        <input type="text" id="meetingSearch" placeholder="Search meetings...">
+      </div>
+    </div>
+
+    <div class="history-list" id="meetingHistory">
+      <!-- Meetings populated here -->
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="header">
+      <div class="header-left">
+        <button id="menuToggle" class="mobile-toggle" onclick="toggleSidebar()"><i class="ph ph-list"></i></button>
+        <div class="title-meta">
+          <h1 id="mainTitle">Meeting <span style="color: var(--primary)">Intelligence</span></h1>
+          <p id="mainSubtitle" style="color: var(--text-dim); font-size: 0.9rem;">High-fidelity transcriptions & AI insights</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="action-btn" title="Settings" onclick="toggleSettings()"><i class="ph-bold ph-gear"></i></button>
+      </div>
+    </header>
+
+    <!-- Historical View Header (Player & Title) -->
+    <section class="historical-view-header" id="historicalHeader" style="display: none;">
+      <div class="player-container glass">
+        <div class="player-info">
+          <i class="ph ph-play-circle player-icon"></i>
+          <div>
+            <h4 id="viewTitle">Meeting Recording</h4>
+            <p id="viewDate">October 24, 2023</p>
+          </div>
+        </div>
+        <audio id="audioPlayer" controls class="custom-audio-player"></audio>
+      </div>
+    </section>
+
+    <!-- New Meeting / Recording View -->
+    <section class="recorder-card" id="recorderCard">
+      <div class="title-input-group">
+        <label for="meetingTitle">Meeting Topic</label>
+        <input type="text" id="meetingTitle" class="meeting-title-input"
+          placeholder="Start typing a title or leave for AI auto-title...">
+      </div>
+
+      <div class="controls">
+        <button id="startBtn" class="btn btn-primary">
+          <i class="ph-bold ph-microphone"></i> Start Recording
+        </button>
+        <div id="visualizerContainer" style="flex: 1; height: 40px; display: none; margin: 0 15px;">
+          <canvas id="audioVisualizer" style="width: 100%; height: 100%;"></canvas>
+        </div>
+        <button id="stopBtn" class="btn btn-danger" disabled>
+          <i class="ph-bold ph-stop"></i> Stop
+        </button>
+        <div class="upload-group">
+          <button id="uploadBtn" class="btn"
+            style="background: rgba(255,255,255,0.05); border: 1px solid var(--border);"
+            onclick="document.getElementById('fileInput').click()">
+            <i class="ph ph-upload-simple"></i> Select File
+          </button>
+          
+          <div id="selectionPreview" class="selection-preview" style="display: none;">
+            <div class="file-info-bar">
+               <i class="ph ph-file-audio"></i>
+               <span id="selectedFileName">filename.wav</span>
+            </div>
+            <button id="confirmProcessBtn" class="btn btn-primary" style="margin-top: 10px; width: 100%;">
+              <i class="ph-bold ph-lightning"></i> Confirm & Process Recording
+            </button>
+          </div>
+
+          <p class="upload-hint">MP4, MP3, WAV, M4A, MKV, MOV supported</p>
+          <input type="file" id="fileInput" hidden accept="audio/*,video/*" onchange="handleFileUpload(event)">
+        </div>
+        <div class="status-container">
+          <span id="statusText" style="font-size: 0.9rem; color: var(--text-dim);">Ready to record</span>
+          <button id="cancelBtn" class="action-btn-danger" style="display: none; padding: 6px 12px; font-size: 0.8rem;">
+            <i class="ph ph-x-circle"></i> Cancel
+          </button>
+        </div>
+      </div>
+
+      <!-- AI Processing Tracker -->
+      <div class="processing-tracker" id="processingTracker">
+        <!-- New Actual Progress Bar -->
+        <div class="actual-progress-container">
+          <div class="actual-progress-bar" id="actualProgressBar"></div>
+          <div class="progress-info">
+            <span id="progressPercent">0%</span>
+            <span id="currentPhase">Initialising...</span>
+          </div>
+        </div>
+        
+        <div class="progress-steps">
+          <div class="step" id="stepExtract">
+            <div class="step-dot"></div>
+            <span>Extraction</span>
+          </div>
+          <div class="step" id="stepDenoise">
+            <div class="step-dot"></div>
+            <span>Denoising</span>
+          </div>
+          <div class="step" id="stepWhisper">
+            <div class="step-dot"></div>
+            <span>Transcribing</span>
+          </div>
+          <div class="step" id="stepDiarize">
+            <div class="step-dot"></div>
+            <span>Speaker ID</span>
+          </div>
+          <div class="step" id="stepAI">
+            <div class="step-dot"></div>
+            <span>AI Summary</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="results-grid" id="resultsGrid">
+      <div class="results-main">
+        <section class="result-card transcript-card">
+          <div class="card-header">
+            <h3><i class="ph-bold ph-file-text"></i> Smart Transcript</h3>
+            <div class="card-actions">
+              <div id="translationControl" style="display: none; align-items: center; margin-right: 12px;">
+                <span class="lang-label">Translate</span>
+                <label class="switch-sm">
+                  <input type="checkbox" id="translateToggle" onchange="toggleTranslation()">
+                  <span class="slider round"></span>
+                </label>
+              </div>
+              <div id="englishBadge" style="display: none;" class="lang-badge">English (Original)</div>
+              <button class="action-btn-sm" onclick="copyToClipboard('transcript')" title="Copy Text"><i class="ph ph-copy"></i></button>
+              <button class="action-btn-sm" onclick="downloadFile('docx', 'transcript')" title="Download Docx"><i class="ph ph-file-doc"></i></button>
+            </div>
+          </div>
+          <div id="transcript" class="content-box">
+            <p class="placeholder-text">Transcript will appear here...</p>
+          </div>
+        </section>
+      </div>
+
+      <aside class="results-sidebar">
+        <!-- Intelligent Chapters -->
+        <section class="result-card sidebar-card insights-card">
+          <div class="card-header">
+            <h3><i class="ph-bold ph-list-numbers"></i> Chapters</h3>
+          </div>
+          <div id="chaptersHUD" class="content-box-sm">
+            <p class="placeholder-text-sm">Auto-generating segments...</p>
+          </div>
+        </section>
+
+        <!-- Speaker Insights -->
+        <section class="result-card sidebar-card speaker-roles-card">
+          <div class="card-header">
+            <h3><i class="ph-bold ph-users-three"></i> Speaker Roles</h3>
+          </div>
+          <div id="speakerRolesHUD" class="content-box-sm">
+            <p class="placeholder-text-sm">Inferring roles...</p>
+          </div>
+        </section>
+
+        <!-- Summary & Actions -->
+        <section class="result-card sidebar-card summary-card">
+          <div class="card-header">
+            <h3><i class="ph-bold ph-lightbulb"></i> AI Summary</h3>
+            <button class="action-btn-sm" onclick="copyToClipboard('summary')"><i class="ph ph-copy"></i></button>
+          </div>
+          <div id="summary" class="content-box-sm">
+             <p class="placeholder-text-sm">AI Insights will appear here...</p>
+          </div>
+        </section>
+
+        <section class="result-card sidebar-card action-hud-card">
+          <div class="card-header">
+            <h3><i class="ph-bold ph-check-square"></i> Action HUD</h3>
+            <button class="action-btn-sm" onclick="copyToClipboard('actions')"><i class="ph ph-copy"></i></button>
+          </div>
+          <div id="actions" class="content-box-sm">
+            <p class="placeholder-text-sm">Tasks will appear here...</p>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Settings Modal Overlay -->
+  <div id="settingsModal" class="modal-overlay" style="display: none;"
+    onclick="if(event.target==this) toggleSettings()">
+    <div class="modal-content glass">
+      <div class="modal-header">
+        <h3><i class="ph ph-sliders"></i> Preferences</h3>
+        <button class="close-btn" onclick="toggleSettings()"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-item">
+          <div class="setting-info">
+            <strong>Model Intelligence</strong>
+            <p>Choose accuracy vs speed balance</p>
+          </div>
+          <select id="modelQuality" class="setting-select">
+            <option value="base">Turbo Speed (Fastest)</option>
+            <option value="small">Balanced (Standard)</option>
+            <option value="medium" selected>Pro Accuracy (Heavy)</option>
+          </select>
+        </div>
+        <p id="vramWarning" style="font-size: 0.7rem; color: #f59e0b; margin-top: -10px; display: none;">
+          <i class="ph ph-warning"></i> Pro model may reach 4GB VRAM limit. Close other apps.
+        </p>
+
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
+
+        <div class="setting-item maintenance-section">
+          <div class="setting-info">
+            <strong>Maintenance</strong>
+            <p id="cleanupStatus">Checking storage status...</p>
+          </div>
+          <button id="cleanupBtn" class="action-btn-danger" onclick="performCleanup()">
+            <i class="ph ph-trash"></i> Clean Up
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar Overlay for Mobile -->
+  <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">Copied to clipboard!</div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
